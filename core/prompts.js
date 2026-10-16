@@ -6,7 +6,7 @@
  * в чат не попадает, иначе контекст разрастается.
  */
 
-import { setExtensionPrompt, extension_prompt_types, extension_prompt_roles } from '../../../../script.js';
+import { setExtensionPrompt, extension_prompt_types, extension_prompt_roles } from '../../../../../script.js';
 import { getSettings, getCharacterName } from './state.js';
 import { listGazette, assess, isOfficial } from '../modules/gazette.js';
 import { listNotices } from '../modules/board.js';

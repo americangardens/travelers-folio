@@ -7,8 +7,10 @@
  * ВАЖНО: расширение не хранит API-ключи. Только имя профиля.
  */
 
-import { chat_metadata, saveSettingsDebounced } from '../../../../script.js';
-import { extension_settings, saveMetadataDebounced } from '../../../extensions.js';
+// core/state.js → public/scripts/extensions/third-party/travelers-folio/core/
+//   ../../../../../ = public/   (core + travelers-folio + third-party + extensions + scripts + public)
+import { chat_metadata, saveSettingsDebounced } from '../../../../../script.js';
+import { extension_settings, saveMetadataDebounced } from '../../../../extensions.js';
 
 const META_KEY = 'travelersFolio';
 const SETTINGS_KEY = 'travelersFolio_settings';

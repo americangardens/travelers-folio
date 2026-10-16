@@ -9,11 +9,11 @@
  * Если профиль не выбран — генерация идёт через текущую модель чата.
  */
 
-// core/generation.js → public/scripts/extensions/travelers-folio/core/
-//   ../../../ = public/scripts/
-import { executeSlashCommands } from '../../../slash-commands.js';
-import { generateQuietPrompt } from '../../../../script.js';
-import { extension_settings } from '../../../extensions.js';
+// core/generation.js → public/scripts/extensions/third-party/travelers-folio/core/
+//   ../../../../../ = public/   (core + travelers-folio + third-party + extensions + scripts + public)
+import { executeSlashCommands } from '../../../../slash-commands.js';
+import { generateQuietPrompt } from '../../../../../script.js';
+import { extension_settings } from '../../../../extensions.js';
 import { getSettings, saveSettings } from './state.js';
 
 /** Поля профиля, применяемые на время тихой генерации. */

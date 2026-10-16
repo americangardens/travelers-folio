@@ -31,7 +31,10 @@ function mountButton() {
     btn.title = 'Дорожная канцелярия';
     btn.innerHTML = '<i class="fa-solid fa-folder-open"></i><span>Канцелярия</span>';
     btn.addEventListener('click', toggle);
-    $('#send_form').prepend(btn);
+    // #send_form может ещё не быть в DOM — тогда вешаем кнопку позже.
+    const form = document.getElementById('send_form');
+    if (form) form.prepend(btn);
+    else document.body.appendChild(btn);
 }
 
 function unmountButton() {
