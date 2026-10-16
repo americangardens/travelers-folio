@@ -1,0 +1,13 @@
+{
+    "display_name": "Дорожная канцелярия",
+    "loading_order": 12,
+    "requires": [],
+    "optional": [],
+    "js": "index.js",
+    "css": "ui/styles.css",
+    "author": "americangardens",
+    "version": "0.2.0",
+    "homePage": "",
+    "source": "",
+    "auto_update": true
+}

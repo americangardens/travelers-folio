@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Дорожная канцелярия — превью</title>
+<link rel="stylesheet" href="preview.css">
+</head>
+<body>
+
+<div class="book">
+    <div class="header">
+        <span class="crest">⚜️</span>
+        <span class="title">Канцелярия</span>
+        <span class="crest" style="font-size:18px">✕</span>
+    </div>
+    <div class="tabs" id="tabs"></div>
+    <div class="body" id="body"></div>
+</div>
+
+<div class="fab-hint">
+    <span>плавающая кнопка в углу</span>
+    <div class="fab">⚜️</div>
+</div>
+
+<script>
+/* ── Демо-данные: повторяют то, что вернула бы модель ── */
+
+const DAY = 86400000;
+
+const RUMOR_KINDS = {
+    herald: { truth: 55, truthDecay: 8,  reach: 90, reachDecay: 12, icon: '📯', label: 'Глашатай' },
+    court:  { truth: 65, truthDecay: 5,  reach: 45, reachDecay: 10, icon: '🎭', label: 'Сплетни знати' },
+    market: { truth: 45, truthDecay: 10, reach: 70, reachDecay: 8,  icon: '🛒', label: 'Рыночная болтовня' },
+    tavern: { truth: 25, truthDecay: 15, reach: 80, reachDecay: 6,  icon: '🍺', label: 'Таверные байки' },
+    street: { truth: 35, truthDecay: 12, reach: 65, reachDecay: 9,  icon: '🗣️', label: 'Уличный шёпот' },
+};
+const OFFICIAL_KINDS = {
+    edict:    { truth: 95, truthDecay: 0, reach: 20, reachDecay: 8, icon: '👑', label: 'Королевский указ' },
+    manifest: { truth: 95, truthDecay: 0, reach: 30, reachDecay: 8, icon: '📜', label: 'Манифест' },
+    tax:      { truth: 95, truthDecay: 0, reach: 25, reachDecay: 8, icon: '🧾', label: 'Сбор и подать' },
+    priest:   { truth: 85, truthDecay: 0, reach: 35, reachDecay: 7, icon: '⛪', label: 'Проповедь' },
+};
+const ALL_KINDS = { ...RUMOR_KINDS, ...OFFICIAL_KINDS };
+const NOTICE_KINDS = {
+    job:    { icon: '⚒️', label: 'Работа' },
+    people: { icon: '🧭', label: 'Спутники' },
+    offer:  { icon: '📦', label: 'Товар' },
+    board:  { icon: '🏠', label: 'Случай' },
+};
+const REACTION_DELTA = { support: 2, doubt: -3, spread: 4 };
+
+const state = {
+    tab: 'gazette',
+    gazette: [
+        { id: 'g1', kind: 'herald', official: false, age: 0.3,
+          text: 'Ночью у моста видели караван с северных земель — идут под знаком трёх волн.',
+          source: 'Глашатай Илья', place: 'Королевские ворота', reactions: { support: 4, doubt: 1, spread: 11 } },
+        { id: 'g2', kind: 'market', official: false, age: 0.8,
+          text: 'У дверей гильдии снова не было стражи. Купцы уехали на ярмарку в Торжок.',
+          source: 'Торговец Оддо', place: 'Рыночная площадь', reactions: { support: 7, doubt: 2, spread: 6 } },
+        { id: 'g3', kind: 'tavern', official: false, age: 3.4,
+          text: 'Кто-то третий ночь крал фонари с моста. Стража никого не поймала.',
+          source: 'Стражник Пётр', place: 'Трактир «Медведь»', reactions: { support: 2, doubt: 5, spread: 9 } },
+        { id: 'g4', kind: 'edict', official: true, age: 1.2,
+          text: 'Указ. Законный сургуч. Со всеми подданными королевства повелеваю: отныне ни одна гильдия не вправе скупать зерно за границей без указу палаты.',
+          source: 'Королевский указ', place: 'Канцелярия', reactions: { support: 1, doubt: 0, spread: 1 } },
+        { id: 'g5', kind: 'street', official: false, age: 0.6,
+          text: 'Говорят, в подземельях под старой мельницей нашли ход куда-то вниз.',
+          source: 'Мальчишка-водонос', place: 'Улица Мельничная', reactions: { support: 3, doubt: 1, spread: 8 } },
+        { id: 'g6', kind: 'market', official: false, age: 5.5, refuted: true,
+          text: 'У гильдии украли всю казну за одну ночь.',
+          source: 'Торговец Оддо', place: 'Рыночная площадь', reactions: { support: 1, doubt: 2, spread: 1 } },
+    ],
+    board: [
+        { id: 'n1', kind: 'people', taken: false, age: 0.5,
+          title: 'Ищу спутника до Чёрных гор',
+          text: 'Купец Айвен идёт с караваном через перевал. Одному тяжело, нужен человек с оружием.',
+          author: 'Капитан Братт', place: 'У ворот, перед почтой', reward: 'половина выручки' },
+        { id: 'n2', kind: 'job', taken: false, age: 1.1,
+          title: 'Нужен лекарь в Приход',
+          text: 'Травница уехала, а раненых много. Работа на зиму, корм и кров включены.',
+          author: 'Староста Тимка', place: 'Ратуша', reward: '18 серебряков' },
+        { id: 'n3', kind: 'offer', taken: false, age: 2.3,
+          title: 'Продам клинок без клейма',
+          text: 'Хорошая сталь, но бумаги нет. Сделка у ворот, на условиях продавца.',
+          author: 'Кузнец Хельга', place: 'Кузница за мостом', reward: 'торг' },
+    ],
+    purse: null,
+    settings: { profile: '', city: 'Новгород', ambient: false, inject: true },
+    profiles: [
+        { name: 'Дешёвая быстрая', model: 'gemini-2.5-flash' },
+        { name: 'Локальная (Ollama)', model: 'qwen2.5:7b' },
+    ],
+};
+
+/* ── Логика: копия формул из modules/gazette.js ── */
+
+const clamp = (v, a = 0, b = 100) => Math.max(a, Math.min(b, v));
+const band = (v, stops) => { for (const [l, n] of stops) if (v >= l) return n; return stops[stops.length - 1][1]; };
+const TRUTH_BANDS = [[90, 'sure'], [65, 'likely'], [40, 'maybe'], [1, 'doubtful'], [0, 'dead']];
+const REACH_BANDS = [[70, 'wide'], [40, 'some'], [1, 'few'], [0, 'none']];
+const TRUTH_LABEL = { sure: 'Почти наверняка', likely: 'Скорее правда', maybe: 'Возможно правда',
+                      doubtful: 'Сомнительно', dead: 'Никто не подтвердил', refuted: 'Опровергнуто' };
+const REACH_LABEL = { wide: 'Все обсуждают', some: 'Обсуждают', few: 'Потихо', none: 'Только в канцелярии' };
+
+function assess(item) {
+    const k = ALL_KINDS[item.kind] || RUMOR_KINDS.street;
+    let truth = k.truth - k.truthDecay * item.age;
+    let reach = k.reach - k.reachDecay * item.age;
+    const r = item.reactions || {};
+    truth += (r.support || 0) * REACTION_DELTA.support;
+    truth += (r.doubt || 0) * REACTION_DELTA.doubt;
+    reach += (r.spread || 0) * REACTION_DELTA.spread;
+    if (item.refuted) {
+        return { truth: 0, reach: clamp(Math.round(reach)), truthLabel: TRUTH_LABEL.refuted,
+                 reachLabel: REACH_LABEL.none, truthBand: 'refuted', reachBand: 'none' };
+    }
+    truth = clamp(Math.round(truth));
+    reach = clamp(Math.round(reach));
+    const tb = band(truth, TRUTH_BANDS);
+    return { truth, reach, truthLabel: TRUTH_LABEL[tb], reachLabel: REACH_LABEL[band(reach, REACH_BANDS)],
+             truthBand: tb, reachBand: band(reach, REACH_BANDS) };
+}
+
+function timeAgo(days) {
+    if (days < 1 / 24) return 'только что';
+    if (days < 1) return `${Math.round(days * 24)} ч назад`;
+    return `${Math.round(days)} дн назад`;
+}
+
+/* ── Рендер ── */
+
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+const TABS = [
+    { id: 'gazette', label: 'Газета' },
+    { id: 'board', label: 'Доска' },
+    { id: 'purse', label: 'Кошель' },
+    { id: 'setup', label: 'Сбор' },
+];
+
+function meter(axis, value, label) {
+    return `<div class="meter-row">
+        <span class="axis">${axis}</span>
+        <div class="meter ${label}"><i style="width:${value}%"></i></div>
+        <span class="verdict">${value}%</span>
+    </div>`;
+}
+
+function quiet(mark, title, text) {
+    return `<div class="quiet">
+        <div class="quiet-mark">${mark}</div>
+        <p>${title}</p>
+        <small>${text}</small>
+    </div>`;
+}
+
+function renderGazette() {
+    if (!state.gazette.length) {
+        return `<div class="actions"><button class="btn">📰 Свежий выпуск</button></div>` +
+            quiet('🕯', 'Пока тихо.', 'Газета ещё не выходила в этой ролевой. Нажми «Свежий выпуск» — и она соберёт слухи и указы из того, что уже есть в чате.');
+    }
+    const cards = state.gazette.map(item => {
+        const a = assess(item), k = ALL_KINDS[item.kind], rc = item.reactions || {};
+        return `
+        <div class="card ${item.refuted ? 'is-refuted' : ''} ${item.official ? 'is-official' : ''}">
+            <div class="card-kind">${k.icon} ${esc(k.label)}</div>
+            <div class="card-text">${esc(item.text)}</div>
+            ${meter('правда', a.truth, a.truthBand)}
+            ${meter('охват', a.reach, a.reachBand)}
+            <div class="verdicts"><span>${esc(a.truthLabel)}</span><span class="dot">·</span><span>${esc(a.reachLabel)}</span></div>
+            <div class="meta">
+                <span>${esc(item.source)}</span>
+                <span>${esc(item.place)}</span>
+                <span>${timeAgo(item.age)}</span>
+            </div>
+            <div class="reactions">
+                <button class="react">🙌 <b>${rc.support || 0}</b></button>
+                <button class="react">🤔 <b>${rc.doubt || 0}</b></button>
+                <button class="react">🗣️ <b>${rc.spread || 0}</b></button>
+            </div>
+            ${item.official || item.refuted ? '' : '<button class="refute">Опровергнуть</button>'}
+        </div>`;
+    }).join('');
+    return `<div class="actions"><button class="btn">📰 Свежий выпуск</button></div>${cards}`;
+}
+
+function renderBoard() {
+    if (!state.board.length) {
+        return `<div class="actions"><button class="btn">📌 Что на доске</button></div>` +
+            quiet('📌', 'Доска пуста.', 'Объявления собираются из того, чем занят город: работа, попутчики, товары.');
+    }
+    const cards = state.board.map(n => {
+        const k = NOTICE_KINDS[n.kind];
+        return `
+        <div class="card notice ${n.taken ? 'is-taken' : ''}">
+            <div class="card-kind">${k.icon} ${esc(k.label)}${n.taken ? ' — взято' : ''}</div>
+            <div class="notice-title">${esc(n.title)}</div>
+            <div class="card-text">${esc(n.text)}</div>
+            ${n.reward ? `<div class="reward">🪙 ${esc(n.reward)}</div>` : ''}
+            <div class="meta">
+                <span>${esc(n.author)}</span>
+                <span>${esc(n.place)}</span>
+                <span>${timeAgo(n.age)}</span>
+            </div>
+            <div class="reactions">
+                <button class="btn">Взять</button>
+                <button class="btn">Сорвать</button>
+            </div>
+        </div>`;
+    }).join('');
+    return `<div class="actions"><button class="btn">📌 Что на доске</button></div>${cards}`;
+}
+
+function renderPurse() {
+    return `<div class="actions"><button class="btn">🪙 Какая здесь валюта</button></div>` +
+        quiet('🪙', 'Кошель пуст.', 'В мире этой ролевой свои деньги. Спроси — модель придумает номиналы по лорбуку и истории чата.');
+}
+
+function renderSetup() {
+    const s = state.settings;
+    const opts = ['<option value="">Текущая модель чата</option>',
+        ...state.profiles.map(p => `<option ${s.profile === p.name ? 'selected' : ''}>${esc(p.name)} — ${esc(p.model)}</option>`)].join('');
+    return `
+        <p class="note">Содержимое канцелярии генерируется отдельной моделью, чтобы не нагружать ту, что пишет роль.</p>
+        <label class="field"><span>Модель для газеты и доски</span><select class="input">${opts}</select></label>
+        <p class="warn">Профили не найдены. Расширение <b>Connection Manager</b> уже есть в SillyTavern — создай в нём профиль. Расширение хранит только <i>имя</i> профиля: ключи остаются в SillyTavern.</p>
+        <label class="field"><span>Город</span><input class="input" value="${esc(s.city)}"></label>
+        <div class="checks">
+            <label><input type="checkbox" ${s.ambient ? 'checked' : ''}><span>Фоновые слухи по локациям</span></label>
+            <label><input type="checkbox" ${s.inject ? 'checked' : ''}><span>Инструкции для модели</span></label>
+        </div>
+        <div class="actions"><button class="btn">⚠ Очистить папку этой ролевой</button></div>
+        <p class="note">Удаляет только папку канцелярии в текущем чате. Чат и расширения не трогает.</p>`;
+}
+
+function renderTabs() {
+    document.getElementById('tabs').innerHTML = TABS.map(t =>
+        `<button class="tab ${t.id === state.tab ? 'is-active' : ''}" data-tab="${t.id}">${t.label}</button>`).join('');
+}
+
+function render() {
+    const body = { gazette: renderGazette, board: renderBoard, purse: renderPurse, setup: renderSetup }[state.tab];
+    document.getElementById('body').innerHTML = body();
+    renderTabs();
+}
+
+document.getElementById('tabs').addEventListener('click', (e) => {
+    const t = e.target.closest('.tab');
+    if (!t) return;
+    state.tab = t.dataset.tab;
+    render();
+});
+
+render();
+</script>
+</body>
+</html>

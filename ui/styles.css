@@ -1,0 +1,445 @@
+/* ── Дорожная канцелярия ────────────────────────────────────
+   Кожаная папка, пергамент, восковая печать.
+   Все цвета — CSS-переменные, их можно переопределить в теме ST.
+   ───────────────────────────────────────────────────────── */
+
+.folio-root {
+    --parchment: #f4e8d0;
+    --parchment-deep: #e8d9b8;
+    --leather-dark: #2d1810;
+    --leather-light: #6b4423;
+    --gold: #d4af37;
+    --gold-muted: #b8956a;
+    --ink: #2a1810;
+    --ink-soft: #5a4632;
+    --wax: #8b0000;
+    --shadow: rgba(20, 10, 4, 0.45);
+}
+
+.folio-root,
+.folio-root * { box-sizing: border-box; }
+
+/* ── Плавающая кнопка ── */
+.folio-fab {
+    position: fixed;
+    right: 18px;
+    bottom: 90px;
+    width: 80px;
+    height: 100px;
+    border: 2px solid var(--gold-muted);
+    border-radius: 6px 6px 10px 10px;
+    background:
+        repeating-linear-gradient(45deg, rgba(0,0,0,0.06) 0 6px, transparent 6px 12px),
+        linear-gradient(160deg, var(--leather-light), var(--leather-dark));
+    color: var(--gold);
+    font-size: 30px;
+    cursor: pointer;
+    box-shadow: 0 8px 20px var(--shadow);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.15s ease;
+}
+.folio-fab:hover { transform: translateY(-2px) scale(1.03); }
+.folio-root.is-enabled .folio-fab { display: flex; }
+
+.folio-fab .folio-badge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 5px;
+    border-radius: 11px;
+    background: var(--wax);
+    color: #ffe9c9;
+    font-size: 12px;
+    font-weight: 700;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #f0c9a0;
+}
+.folio-fab.has-unread .folio-badge { display: flex; }
+
+/* ── Окно ── */
+.folio-modal {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+.folio-root.is-open .folio-modal { display: flex; }
+.folio-backdrop { position: absolute; inset: 0; background: rgba(12, 8, 4, 0.55); }
+
+.folio-book {
+    position: relative;
+    width: min(420px, 94vw);
+    height: min(620px, 88vh);
+    display: flex;
+    flex-direction: column;
+    border-radius: 8px 12px 12px 8px;
+    border: 1px solid var(--leather-dark);
+    background:
+        linear-gradient(120deg, rgba(107,68,35,0.10), transparent 40%),
+        repeating-linear-gradient(0deg, rgba(120,90,50,0.05) 0 2px, transparent 2px 5px),
+        var(--parchment);
+    color: var(--ink);
+    box-shadow: 0 24px 60px var(--shadow), inset 0 0 60px rgba(140, 100, 50, 0.18);
+    font-family: 'IM Fell English', 'Crimson Text', Georgia, serif;
+    overflow: hidden;
+}
+
+/* Кожаный корешок */
+.folio-book::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 16px;
+    background: linear-gradient(90deg, var(--leather-dark), var(--leather-light) 70%, rgba(109,68,35,0));
+}
+
+.folio-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px 10px 26px;
+    border-bottom: 2px solid var(--gold-muted);
+}
+.folio-crest { font-size: 26px; }
+.folio-title {
+    flex: 1;
+    font-family: 'Cinzel', 'MedievalSharp', Georgia, serif;
+    font-size: 17px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink);
+}
+.folio-close {
+    background: none;
+    border: none;
+    color: var(--ink-soft);
+    font-size: 18px;
+    cursor: pointer;
+}
+.folio-close:hover { color: var(--wax); }
+
+.folio-tabs {
+    display: flex;
+    gap: 4px;
+    padding: 8px 16px 0 26px;
+    border-bottom: 1px solid rgba(90, 70, 50, 0.3);
+}
+.folio-tab {
+    flex: 1;
+    padding: 7px 4px;
+    border: none;
+    border-bottom: 2px solid transparent;
+    background: none;
+    color: var(--ink-soft);
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.folio-tab.is-active {
+    color: var(--ink);
+    border-bottom-color: var(--wax);
+    font-weight: 700;
+}
+.folio-tab .dot { color: var(--wax); font-weight: 700; }
+
+.folio-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px 16px 16px 26px;
+}
+
+.folio-actions { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+.folio-btn {
+    padding: 7px 12px;
+    border: 1px solid var(--gold-muted);
+    border-radius: 4px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.35), rgba(180,150,100,0.2));
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+.folio-btn:hover:not(:disabled) { background: rgba(212,175,55,0.28); }
+.folio-btn:disabled { opacity: 0.5; cursor: wait; }
+
+.folio-note {
+    margin: 0 0 12px;
+    font-size: 12px;
+    font-style: italic;
+    color: var(--ink-soft);
+}
+.folio-empty { text-align: center; color: var(--ink-soft); font-style: italic; padding: 28px 8px; font-size: 14px; }
+
+/* ── Карточка слуха ── */
+.folio-card {
+    position: relative;
+    margin-bottom: 12px;
+    padding: 11px 12px;
+    border: 1px solid rgba(90,70,50,0.35);
+    border-radius: 4px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.4), rgba(232,217,184,0.5));
+    box-shadow: 0 2px 5px rgba(60,40,20,0.15);
+}
+.folio-card.is-refuted { opacity: 0.6; }
+.folio-card-kind { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-soft); }
+.folio-card-text { margin: 7px 0; font-size: 14px; line-height: 1.45; }
+
+.folio-meter { height: 9px; border: 1px solid rgba(90,70,50,0.4); border-radius: 2px; overflow: hidden; background: rgba(90,70,50,0.14); }
+.folio-meter > i { display: block; height: 100%; transition: width 0.3s ease; }
+.folio-meter.sure > i, .folio-meter.likely > i { background: linear-gradient(90deg, #8d6b2f, var(--gold)); }
+.folio-meter.maybe > i { background: linear-gradient(90deg, #97792f, #d8c05a); }
+.folio-meter.doubtful > i, .folio-meter.dead > i { background: linear-gradient(90deg, #7a4a2a, #b07a4a); }
+.folio-meter.refuted > i { background: var(--wax); }
+
+.folio-meta { font-size: 11px; color: var(--ink-soft); }
+.folio-meta span + span::before { content: ' · '; }
+
+.folio-reactions { display: flex; gap: 6px; margin-top: 9px; }
+.folio-react {
+    flex: 1;
+    padding: 5px 2px;
+    border: 1px solid rgba(90,70,50,0.3);
+    border-radius: 3px;
+    background: rgba(255,255,255,0.3);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+}
+.folio-react:hover { background: rgba(212,175,55,0.25); }
+.folio-react b { font-weight: 700; color: var(--wax); }
+
+/* ── Две шкалы: правда и охват ── */
+.folio-card.is-official {
+    border-color: var(--gold-muted);
+    background:
+        repeating-linear-gradient(90deg, transparent 0 22px, rgba(212,175,55,0.08) 22px 23px),
+        linear-gradient(180deg, rgba(255,250,235,0.6), rgba(232,217,184,0.55));
+}
+.folio-card.is-official::after {
+    content: '🔱';
+    position: absolute;
+    top: 8px; right: 10px;
+    font-size: 15px;
+    opacity: 0.65;
+}
+
+.folio-meter-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; font-size: 12px; }
+.folio-meter-row .folio-meter { flex: 1; }
+.folio-axis {
+    width: 46px;
+    flex: none;
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+}
+.folio-verdict { font-weight: 700; white-space: nowrap; min-width: 34px; text-align: right; }
+
+/* Охват — холоднее, чем правда: это про известность, а не про истину. */
+.folio-meter.wide  > i, .folio-meter.some > i { background: linear-gradient(90deg, #4a6b52, #7fa383); }
+.folio-meter.few   > i { background: linear-gradient(90deg, #5a5f52, #8f9484); }
+.folio-meter.none  > i { background: rgba(90,70,50,0.25); }
+.folio-meter.refuted > i { background: var(--wax); }
+
+.folio-verdicts {
+    display: flex;
+    gap: 6px;
+    margin: 6px 0 4px;
+    font-size: 11px;
+    font-style: italic;
+    color: var(--ink-soft);
+}
+.folio-verdicts .dot { font-style: normal; opacity: 0.5; }
+
+/* ── Объявления на доске ── */
+.folio-notice {
+    border-style: dashed;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.45), rgba(226,210,175,0.5)),
+        var(--parchment);
+    /* Кнопки на листке, как приколотые гвоздём. */
+    box-shadow: 0 1px 3px rgba(60,40,20,0.2);
+    padding-top: 13px;
+}
+.folio-notice::before {
+    content: '';
+    position: absolute;
+    top: 5px; left: 50%;
+    width: 7px; height: 7px;
+    margin-left: -3px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #8a8a8a, #3a3a3a);
+}
+.folio-notice.is-taken { opacity: 0.55; }
+.folio-notice-title {
+    margin: 5px 0;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.3;
+}
+.folio-reward {
+    margin: 7px 0;
+    padding: 4px 8px;
+    display: inline-block;
+    border: 1px solid var(--gold-muted);
+    border-radius: 3px;
+    background: rgba(212,175,55,0.16);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+/* ── Экран «пока тихо» ── */
+.folio-quiet {
+    margin-top: 34px;
+    padding: 26px 20px;
+    text-align: center;
+    border: 1px dashed rgba(90,70,50,0.3);
+    border-radius: 4px;
+    background: rgba(255,255,255,0.25);
+}
+.folio-quiet-mark {
+    font-size: 34px;
+    opacity: 0.5;
+    animation: folio-flicker 3.5s ease-in-out infinite;
+}
+@keyframes folio-flicker {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 0.22; }
+}
+.folio-quiet p {
+    margin: 10px 0 6px;
+    font-size: 16px;
+    font-style: italic;
+    color: var(--ink);
+}
+.folio-quiet small {
+    display: block;
+    max-width: 260px;
+    margin: 0 auto;
+    font-size: 12px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+}
+@media (prefers-reduced-motion: reduce) {
+    .folio-quiet-mark { animation: none; }
+}
+
+.folio-refute {
+    margin-top: 8px;
+    background: none;
+    border: none;
+    color: var(--wax);
+    font-family: inherit;
+    font-size: 11px;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+/* ── Свиток прокламации ── */
+.folio-scroll {
+    position: relative;
+    margin-bottom: 14px;
+    padding: 14px 14px 16px;
+    background: var(--parchment);
+    border: 1px solid rgba(90,70,50,0.4);
+    box-shadow: inset 0 0 24px rgba(140,100,50,0.2);
+}
+.folio-scroll::after {
+    content: '';
+    position: absolute;
+    right: 10px; bottom: 8px;
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #b22, var(--wax));
+    box-shadow: 0 2px 4px rgba(0,0,0,0.4), inset 0 0 6px rgba(0,0,0,0.35);
+}
+.folio-scroll-top {
+    font-family: 'Cinzel', Georgia, serif;
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--wax);
+}
+.folio-scroll-meta { margin: 5px 0 8px; font-size: 11px; color: var(--ink-soft); }
+.folio-scroll-text { margin: 0; padding-right: 44px; font-size: 14px; line-height: 1.5; }
+
+/* ── Кошель ── */
+.folio-coins { display: flex; gap: 10px; margin-bottom: 14px; }
+.folio-coin {
+    flex: 1;
+    padding: 10px 6px;
+    text-align: center;
+    border: 1px solid rgba(90,70,50,0.35);
+    border-radius: 4px;
+    background: rgba(255,255,255,0.35);
+}
+.folio-coin .ico { font-size: 20px; display: block; }
+.folio-coin .num { font-size: 17px; font-weight: 700; }
+.folio-coin .lbl { font-size: 11px; color: var(--ink-soft); }
+.folio-ledger-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    border-bottom: 1px dotted rgba(90,70,50,0.3);
+    font-size: 13px;
+}
+.folio-ledger-row .amt { font-weight: 700; }
+.folio-ledger-row .amt.plus { color: #2f6b2f; }
+.folio-ledger-row .amt.minus { color: var(--wax); }
+
+.folio-loading { font-size: 13px; font-style: italic; color: var(--ink-soft); padding: 10px 0; }
+
+/* ── Вкладка «Сбор» ── */
+.folio-field { display: block; margin-bottom: 14px; }
+.folio-field > span {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 13px;
+    color: var(--ink-soft);
+}
+.folio-field .text_pole {
+    width: 100%;
+    padding: 7px 9px;
+    border: 1px solid rgba(90,70,50,0.45);
+    border-radius: 3px;
+    background: rgba(255,255,255,0.55);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 13px;
+}
+.folio-field select.text_pole option { color: #2a1810; background: #f4e8d0; }
+
+.folio-warn {
+    margin: 0 0 14px;
+    padding: 9px 11px;
+    border-left: 3px solid var(--wax);
+    background: rgba(139,0,0,0.07);
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--ink);
+}
+
+.folio-checks { margin-bottom: 14px; }
+.folio-checks label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 7px;
+    font-size: 13px;
+    cursor: pointer;
+}
+.folio-checks input { accent-color: var(--wax); }
+
+@media (max-width: 480px) {
+    .folio-book { width: 100vw; height: 100vh; border-radius: 0; }
+}
