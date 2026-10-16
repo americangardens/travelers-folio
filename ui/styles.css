@@ -20,27 +20,31 @@
 .folio-root * { box-sizing: border-box; }
 
 /* ── Плавающая кнопка ── */
+/* Прозрачная кнопка: на любом фоне читается герб, а не кожаный прямоугольник. */
 .folio-fab {
     position: fixed;
-    right: 18px;
+    right: 14px;
     bottom: 90px;
-    width: 80px;
-    height: 100px;
-    border: 2px solid var(--gold-muted);
-    border-radius: 6px 6px 10px 10px;
-    background:
-        repeating-linear-gradient(45deg, rgba(0,0,0,0.06) 0 6px, transparent 6px 12px),
-        linear-gradient(160deg, var(--leather-light), var(--leather-dark));
+    width: 52px;
+    height: 52px;
+    border: 1px solid rgba(212,175,55,0.45);
+    border-radius: 50%;
+    background: rgba(20,12,6,0.28);
     color: var(--gold);
-    font-size: 30px;
+    font-size: 22px;
     cursor: pointer;
-    box-shadow: 0 8px 20px var(--shadow);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
     display: none;
     align-items: center;
     justify-content: center;
-    transition: transform 0.15s ease;
+    transition: transform 0.15s ease, background 0.15s ease;
 }
-.folio-fab:hover { transform: translateY(-2px) scale(1.03); }
+.folio-fab:hover {
+    transform: scale(1.08);
+    background: rgba(20,12,6,0.45);
+}
 .folio-root.is-enabled .folio-fab { display: flex; }
 
 .folio-fab .folio-badge {
@@ -401,23 +405,43 @@
 
 /* ── Вкладка «Сбор» ── */
 .folio-field { display: block; margin-bottom: 14px; }
+/* .text_pole принадлежит SillyTavern и задаёт color через SmartThemeBodyColor,
+   из-за чего в тёмной теме текст был светлым на светлом пергаменте.
+   Поэтому перебиваем конкретными правилами с !important. */
+.folio-field .text_pole,
+.folio-field input.text_pole,
+.folio-field select.text_pole {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid rgba(90,70,50,0.5) !important;
+    border-radius: 3px;
+    background: rgba(255,252,244,0.92) !important;
+    color: #2a1810 !important;
+    font-family: inherit;
+    font-size: 13px;
+    margin: 0;
+    height: auto;
+}
+.folio-field .text_pole::placeholder { color: rgba(42,24,16,0.45) !important; }
+.folio-field select.text_pole option {
+    color: #2a1810;
+    background: #f4e8d0;
+}
+/* Фокус: ST-обводка сливается с пергаментом — задаём свою. */
+.folio-field .text_pole:focus {
+    outline: none;
+    border-color: var(--wax) !important;
+    box-shadow: 0 0 0 2px rgba(139,0,0,0.15);
+}
+
+/* Надпись над полем. */
 .folio-field > span {
     display: block;
     margin-bottom: 5px;
     font-size: 13px;
-    color: var(--ink-soft);
+    font-weight: 700;
+    color: #3d2818;
 }
-.folio-field .text_pole {
-    width: 100%;
-    padding: 7px 9px;
-    border: 1px solid rgba(90,70,50,0.45);
-    border-radius: 3px;
-    background: rgba(255,255,255,0.55);
-    color: var(--ink);
-    font-family: inherit;
-    font-size: 13px;
-}
-.folio-field select.text_pole option { color: #2a1810; background: #f4e8d0; }
 
 .folio-warn {
     margin: 0 0 14px;
@@ -439,6 +463,100 @@
     cursor: pointer;
 }
 .folio-checks input { accent-color: var(--wax); }
+
+/* ── Голуби: переписка ── */
+.folio-subhead {
+    margin: 14px 0 7px;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+}
+.folio-subhead:first-of-type { margin-top: 4px; }
+
+.folio-contact {
+    display: grid;
+    grid-template-columns: 26px 1fr auto;
+    grid-template-rows: auto auto;
+    align-items: center;
+    gap: 1px 9px;
+    width: 100%;
+    margin-bottom: 6px;
+    padding: 9px 11px;
+    border: 1px solid rgba(90,70,50,0.3);
+    border-radius: 4px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.45), rgba(232,217,184,0.45));
+    color: var(--ink);
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+.folio-contact:hover { background: rgba(212,175,55,0.24); }
+.folio-contact-ico { grid-row: 1 / 3; font-size: 18px; }
+.folio-contact-name { font-size: 14px; font-weight: 700; }
+.folio-contact-name b { color: var(--wax); }
+.folio-contact-count { grid-column: 3; grid-row: 1; font-size: 11px; color: var(--ink-soft); white-space: nowrap; }
+.folio-contact-note {
+    grid-column: 2 / 4;
+    font-size: 11px;
+    font-style: italic;
+    color: var(--ink-soft);
+}
+
+.folio-letter-head {
+    margin: 4px 0 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(90,70,50,0.3);
+    font-size: 15px;
+    font-weight: 700;
+}
+
+/* Письмо — листок со сгибом. */
+.folio-thread { margin-bottom: 12px; }
+.folio-msg {
+    margin-bottom: 8px;
+    padding: 9px 11px;
+    border: 1px solid rgba(90,70,50,0.28);
+    border-radius: 3px;
+    font-size: 13px;
+    line-height: 1.5;
+    background: rgba(255,255,255,0.4);
+}
+.folio-msg.is-you {
+    margin-left: 18px;
+    background: linear-gradient(180deg, rgba(212,175,55,0.16), rgba(212,175,55,0.08));
+}
+.folio-msg.is-them {
+    margin-right: 18px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.55), rgba(232,217,184,0.55));
+}
+.folio-msg-author {
+    margin-bottom: 4px;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+}
+.folio-msg-text { white-space: pre-wrap; }
+
+.folio-letter-input {
+    width: 100%;
+    padding: 9px 11px;
+    border: 1px solid rgba(90,70,50,0.45);
+    border-radius: 3px;
+    background: rgba(255,252,244,0.92) !important;
+    color: #2a1810 !important;
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1.5;
+    resize: vertical;
+}
+.folio-letter-input::placeholder { color: rgba(42,24,16,0.45); }
+.folio-letter-input:focus {
+    outline: none;
+    border-color: var(--wax);
+    box-shadow: 0 0 0 2px rgba(139,0,0,0.15);
+}
 
 @media (max-width: 480px) {
     .folio-book { width: 100vw; height: 100vh; border-radius: 0; }

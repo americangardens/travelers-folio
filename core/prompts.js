@@ -10,6 +10,7 @@ import { setExtensionPrompt, extension_prompt_types, extension_prompt_roles } fr
 import { getSettings, getCharacterName } from './state.js';
 import { listGazette, assess, isOfficial } from '../modules/gazette.js';
 import { listNotices } from '../modules/board.js';
+import { listThreads, threadTranscript } from '../modules/letters.js';
 import { purseLine } from '../modules/purse.js';
 
 const CHAT_KEY = 'travelersFolioChat';
@@ -52,6 +53,21 @@ function purseDigest() {
     }
 }
 
+/** Письма: только последняя реплика каждой переписки, иначе съедает контекст. */
+function lettersDigest() {
+    let threads;
+    try { threads = listThreads(); } catch (e) { return ''; }
+    const active = threads.filter(t => t.messages.length).slice(0, 3);
+    if (!active.length) return '';
+
+    const lines = active.map(t => {
+        const last = t.messages[t.messages.length - 1];
+        const who = last.role === 'you' ? 'ты написал' : `${t.name} ответил`;
+        return `- ${t.name} (${who}): «${String(last.text).slice(0, 180)}»`;
+    });
+    return `Письма (подробности игрок знает сам):\n${lines.join('\n')}`;
+}
+
 function updateFolioInjection() {
     const s = getSettings();
     if (!s.enabled || !s.injectPrompt) {
@@ -63,10 +79,10 @@ function updateFolioInjection() {
     setExtensionPrompt(SYS_KEY, SYS_RULES, extension_prompt_types.IN_PROMPT, 0);
 
     const parts = ['Открытая канцелярия. Бумаги в папке — всё, что персонаж знает из города.'];
-    for (const digest of [gazetteDigest(), boardDigest(), purseDigest()]) {
+    for (const digest of [gazetteDigest(), boardDigest(), lettersDigest(), purseDigest()]) {
         if (digest) parts.push(digest);
     }
     setExtensionPrompt(CHAT_KEY, parts.join('\n\n'), extension_prompt_types.IN_CHAT, 0, false, extension_prompt_roles.USER);
 }
 
-export { updateFolioInjection, gazetteDigest, boardDigest, purseDigest, getCharacterName };
+export { updateFolioInjection, gazetteDigest, boardDigest, lettersDigest, purseDigest, getCharacterName };

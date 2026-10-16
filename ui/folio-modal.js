@@ -21,10 +21,15 @@ import {
 import {
     getPurse, hasCurrency, generateCurrency, denominationScale, listLedger,
 } from '../modules/purse.js';
+import {
+    listThreads, getThread, unreadThreads, markThreadsRead,
+    generateRoster, sendLetter, removeThread, ensureThreadFor,
+} from '../modules/letters.js';
 
 const TABS = [
     { id: 'gazette', label: 'Газета' },
     { id: 'board', label: 'Доска' },
+    { id: 'letters', label: 'Голуби' },
     { id: 'purse', label: 'Кошель' },
     { id: 'setup', label: 'Сбор' },
 ];
@@ -32,6 +37,9 @@ const TABS = [
 let root = null;
 let activeTab = 'gazette';
 let busy = false;
+// Кто выбран для переписки и кого модель предложила как адресатов.
+let letterThreadId = null;
+let roster = [];
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -150,17 +158,91 @@ function renderBoard() {
         ${cards}`;
 }
 
+// ── Голуби ─────────────────────────────────────────────────────
+
+const KIND_ICON = { character: '👤', npc: '🧑', courier: '🕊️' };
+
+function renderLetters() {
+    const threads = listThreads();
+    const active = letterThreadId ? getThread(letterThreadId) : null;
+
+    // Переписка открыта — показываем её.
+    if (active) {
+        const history = active.messages.length
+            ? active.messages.map(m => `
+                <div class="folio-msg ${m.role === 'you' ? 'is-you' : 'is-them'}">
+                    <div class="folio-msg-author">${m.role === 'you' ? 'Ты' : esc(active.name)}</div>
+                    <div class="folio-msg-text">${esc(m.text)}</div>
+                </div>`).join('')
+            : '<div class="folio-empty">Писем ещё не было. Напиши первое.</div>';
+
+        return `
+            <div class="folio-actions">
+                <button class="folio-btn" data-act="close-thread">← К адресатам</button>
+                <button class="folio-btn" data-act="drop-thread">Убрать переписку</button>
+            </div>
+            <div class="folio-letter-head">${KIND_ICON[active.kind] || '🧑'} ${esc(active.name)}</div>
+            <div class="folio-thread">${history}</div>
+            <textarea class="folio-letter-input" data-act="letter-body" rows="4"
+                placeholder="Что написать?"></textarea>
+            <div class="folio-actions">
+                <button class="folio-btn" data-act="send-letter" ${busy ? 'disabled' : ''}>
+                    ${busy ? 'Голубь летит…' : '🕊️ Отправить'}
+                </button>
+            </div>
+            <p class="folio-note">Письмо уйдёт в чат одной строкой. Ответ адресата
+            останется здесь и подмешается в подсказку модели.</p>`;
+    }
+
+    // Список: существующие переписки + предложенные адресаты.
+    const existing = threads.map(t => `
+        <button class="folio-contact" data-act="open-thread" data-id="${esc(t.id)}">
+            <span class="folio-contact-ico">${KIND_ICON[t.kind] || '🧑'}</span>
+            <span class="folio-contact-name">${esc(t.name)}${t.unread ? ' <b>•</b>' : ''}</span>
+            <span class="folio-contact-count">${t.messages.length} писем</span>
+        </button>`).join('');
+
+    const suggested = roster.length
+        ? roster.map((r, i) => `
+            <button class="folio-contact" data-act="pick-contact" data-name="${esc(r.name)}" data-kind="${esc(r.kind)}">
+                <span class="folio-contact-ico">${KIND_ICON[r.kind] || '🧑'}</span>
+                <span class="folio-contact-name">${esc(r.name)}</span>
+                <span class="folio-contact-note">${esc(r.note)}</span>
+            </button>`).join('')
+        : '';
+
+    if (!threads.length && !roster.length) {
+        return `
+            <div class="folio-actions">
+                <button class="folio-btn" data-act="roster" ${busy ? 'disabled' : ''}>🕊️ Кого спросить</button>
+            </div>
+            <div class="folio-quiet">
+                <div class="folio-quiet-mark">🕊</div>
+                <p>Голубят не выпускали.</p>
+                <small>Спроси, кому в этом мире есть что тебе сказать —
+                и начнётся переписка.</small>
+            </div>`;
+    }
+
+    return `
+        <div class="folio-actions">
+            <button class="folio-btn" data-act="roster" ${busy ? 'disabled' : ''}>🕊️ Кого спросить</button>
+        </div>
+        ${existing ? `<div class="folio-subhead">Переписка</div>${existing}` : ''}
+        ${suggested ? `<div class="folio-subhead">Могут написать</div>${suggested}` : ''}`;
+}
+
 // ── Кошель ─────────────────────────────────────────────────────
 
 function renderPurse() {
     if (!hasCurrency()) {
         return `
             <div class="folio-actions">
-                <button class="folio-btn" data-act="currency" ${busy ? 'disabled' : ''}>🪙 Какая здесь валюта</button>
+                <button class="folio-btn" data-act="currency" ${busy ? 'disabled' : ''}>💰 Наполнить карманы</button>
             </div>
             <div class="folio-quiet">
                 <div class="folio-quiet-mark">🪙</div>
-                <p>Кошель пуст.</p>
+                <p>Карманы пусты.</p>
                 <small>В мире этой ролевой свои деньги. Спроси — модель придумает
                 номиналы по лорбуку и истории чата.</small>
             </div>`;
@@ -188,7 +270,7 @@ function renderPurse() {
                 </div>`).join('')
             : '<div class="folio-empty">Транзакций ещё не было.</div>'}
         <div class="folio-actions" style="margin-top:14px">
-            <button class="folio-btn" data-act="currency" ${busy ? 'disabled' : ''}>Другая валюта</button>
+            <button class="folio-btn" data-act="currency" ${busy ? 'disabled' : ''}>💰 Пересчитать по новой</button>
         </div>`;
 }
 
@@ -244,6 +326,7 @@ function renderSetup() {
 
 function bodyHtml() {
     if (activeTab === 'board') return renderBoard();
+    if (activeTab === 'letters') return renderLetters();
     if (activeTab === 'purse') return renderPurse();
     if (activeTab === 'setup') return renderSetup();
     return renderGazette();
@@ -253,13 +336,13 @@ function bodyHtml() {
 
 function updateBadge() {
     if (!root) return;
-    const n = unreadCount() + unreadNotices();
+    const n = unreadCount() + unreadNotices() + unreadThreads();
     const fab = root.querySelector('.folio-fab');
     const badge = root.querySelector('.folio-badge');
     if (badge) badge.textContent = String(n);
     fab?.classList.toggle('has-unread', n > 0);
 
-    const counts = { gazette: unreadCount(), board: unreadNotices() };
+    const counts = { gazette: unreadCount(), board: unreadNotices(), letters: unreadThreads() };
     for (const btn of root.querySelectorAll('.folio-tab')) {
         const c = counts[btn.dataset.tab] || 0;
         let dot = btn.querySelector('.dot');
@@ -283,6 +366,7 @@ export function render() {
 function markRead() {
     markAllRead();
     markNoticesRead();
+    markThreadsRead();
 }
 
 // ── Действия ───────────────────────────────────────────────────
@@ -301,7 +385,8 @@ async function withBusy(fn) {
     }
 }
 
-async function onAction(act, card) {
+async function onAction(act, btn, card) {
+    const { id, name, kind } = btn.dataset;
     if (act === 'issue') {
         await withBusy(async () => {
             const res = await generateIssue();
@@ -323,6 +408,50 @@ async function onAction(act, card) {
         await withBusy(async () => {
             const cur = await generateCurrency();
             if (!cur) alert('Модель не вернула валюту. Попробуй ещё раз.');
+        });
+        return;
+    }
+    if (act === 'roster') {
+        await withBusy(async () => {
+            roster = await generateRoster();
+            if (!roster.length) alert('Модель не вернула адресатов. Попробуй ещё раз.');
+        });
+        return;
+    }
+    if (act === 'pick-contact') {
+        letterThreadId = ensureThreadFor(name, kind).id;
+        render();
+        return;
+    }
+    if (act === 'open-thread') {
+        letterThreadId = id;
+        const t = getThread(letterThreadId);
+        if (t) t.unread = false;
+        render();
+        return;
+    }
+    if (act === 'close-thread') {
+        letterThreadId = null;
+        render();
+        return;
+    }
+    if (act === 'drop-thread') {
+        if (!letterThreadId) return;
+        if (!confirm('Убрать эту переписку? Письма останутся в истории чата.')) return;
+        removeThread(letterThreadId);
+        letterThreadId = null;
+        render();
+        return;
+    }
+    if (act === 'send-letter') {
+        const box = document.querySelector('.folio-letter-input');
+        const text = (box?.value || '').trim();
+        if (!text) { alert('Пустое письмо не улетит.'); return; }
+        if (!letterThreadId) return;
+        const target = letterThreadId;
+        await withBusy(async () => {
+            const reply = await sendLetter(target, text);
+            if (!reply) alert('Голубь не долетел — ответ не получен.');
         });
         return;
     }
@@ -450,7 +579,7 @@ export function initUI() {
     body.addEventListener('click', (e) => {
         const btn = e.target.closest('button');
         if (!btn) return;
-        if (btn.dataset.act) onAction(btn.dataset.act, btn.closest('.folio-card'));
+        if (btn.dataset.act) onAction(btn.dataset.act, btn, btn.closest('.folio-card'));
         else if (btn.dataset.react) onReaction(btn);
     });
 

@@ -86,6 +86,17 @@ const state = {
           text: 'Хорошая сталь, но бумаги нет. Сделка у ворот, на условиях продавца.',
           author: 'Кузнец Хельга', place: 'Кузница за мостом', reward: 'торг' },
     ],
+    letters: [
+        { id: 'Мастер Ильга', name: 'Мастер Ильга', kind: 'character', unread: true, messages: [
+            { role: 'you', text: 'Шкаф готов, но доска поехала. Возьму другую?' },
+            { role: 'them', text: 'Бери у Клары, у ворот на повороте. Скажи, что от меня — отдаст втридорога.' },
+        ] },
+        { id: 'Капитан Братт', name: 'Капитан Братт', kind: 'courier', unread: false, messages: [
+            { role: 'you', text: 'Слышал, ты знаешь дорогу через перевал?' },
+            { role: 'them', text: 'Знаю. И знаю, что она мертва уже три недели. Плати вдвое.' },
+        ] },
+    ],
+    activeLetter: null,
     purse: null,
     settings: { profile: '', city: 'Новгород', ambient: false, inject: true },
     profiles: [
@@ -137,6 +148,7 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
 const TABS = [
     { id: 'gazette', label: 'Газета' },
     { id: 'board', label: 'Доска' },
+    { id: 'letters', label: 'Голуби' },
     { id: 'purse', label: 'Кошель' },
     { id: 'setup', label: 'Сбор' },
 ];
@@ -214,6 +226,38 @@ function renderBoard() {
     return `<div class="actions"><button class="btn">📌 Что на доске</button></div>${cards}`;
 }
 
+function renderLetters() {
+    if (state.activeLetter) {
+        const t = state.letters.find(x => x.id === state.activeLetter);
+        if (t) {
+            const hist = t.messages.map(m => `
+                <div class="msg ${m.role === 'you' ? 'is-you' : 'is-them'}">
+                    <div class="msg-author">${m.role === 'you' ? 'Ты' : esc(t.name)}</div>
+                    <div class="msg-text">${esc(m.text)}</div>
+                </div>`).join('');
+            return `
+                <div class="actions">
+                    <button class="btn" data-x="back">← К адресатам</button>
+                    <button class="btn" data-x="drop">Убрать переписку</button>
+                </div>
+                <div class="letter-head">🧑 ${esc(t.name)}</div>
+                <div class="thread">${hist}</div>
+                <textarea class="letter-input" rows="4" placeholder="Что написать?"></textarea>
+                <div class="actions"><button class="btn">🕊️ Отправить</button></div>
+                <p class="note">Письмо уйдёт в чат одной строкой. Ответ адресата останется здесь и подмешается в подсказку модели.</p>`;
+        }
+    }
+    const contacts = state.letters.map(t => `
+        <button class="contact" data-x="open" data-id="${esc(t.id)}">
+            <span class="contact-ico">${t.kind === 'character' ? '👤' : t.kind === 'courier' ? '🕊️' : '🧑'}</span>
+            <span class="contact-name">${esc(t.name)}${t.unread ? ' <b>•</b>' : ''}</span>
+            <span class="contact-count">${t.messages.length} писем</span>
+        </button>`).join('');
+    return `
+        <div class="actions"><button class="btn">🕊️ Кого спросить</button></div>
+        <div class="subhead">Переписка</div>${contacts}`;
+}
+
 function renderPurse() {
     return `<div class="actions"><button class="btn">🪙 Какая здесь валюта</button></div>` +
         quiet('🪙', 'Кошель пуст.', 'В мире этой ролевой свои деньги. Спроси — модель придумает номиналы по лорбуку и истории чата.');
@@ -242,7 +286,7 @@ function renderTabs() {
 }
 
 function render() {
-    const body = { gazette: renderGazette, board: renderBoard, purse: renderPurse, setup: renderSetup }[state.tab];
+    const body = { gazette: renderGazette, board: renderBoard, letters: renderLetters, purse: renderPurse, setup: renderSetup }[state.tab];
     document.getElementById('body').innerHTML = body();
     renderTabs();
 }
@@ -251,6 +295,19 @@ document.getElementById('tabs').addEventListener('click', (e) => {
     const t = e.target.closest('.tab');
     if (!t) return;
     state.tab = t.dataset.tab;
+    render();
+});
+
+// В витрине работает только переход в переписку — генерации здесь нет.
+document.getElementById('body').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-x]');
+    if (!btn) return;
+    if (btn.dataset.x === 'open') state.activeLetter = btn.dataset.id;
+    else if (btn.dataset.x === 'back') state.activeLetter = null;
+    else if (btn.dataset.x === 'drop') {
+        state.letters = state.letters.filter(x => x.id !== state.activeLetter);
+        state.activeLetter = null;
+    }
     render();
 });
 

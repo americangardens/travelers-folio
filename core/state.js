@@ -36,6 +36,7 @@ const DEFAULT_SETTINGS = {
     maxNotices: 24,
     maxNoticesPerRefresh: 5,
     maxTokens: 900,
+    maxLettersPerThread: 40,
 };
 
 /** @returns {object} глобальные настройки расширения */
@@ -59,6 +60,8 @@ function emptyMeta() {
         gazette: [],
         /** Доска объявлений: заказы, попутчики, товары. */
         board: [],
+        /** Почтовые голуби: переписка, один поток на адресата. */
+        letters: [],
         /** Кошелёк. currency.generated=false, пока модель не придумает монеты. */
         purse: { currency: { generated: false, unit: '', plural: '', denominations: [] }, amounts: {}, ledger: [] },
         /** Трофеи: что персонаж лично узнал и что уходит в чат. */
@@ -77,6 +80,7 @@ export function getMeta() {
         meta.version = 2;
         meta.gazette = meta.gazette || [];
         meta.board = meta.board || [];
+        meta.letters = meta.letters || [];
         meta.purse = meta.purse?.currency ? meta.purse : emptyMeta().purse;
         delete meta.rumors;
         delete meta.proclamations;
